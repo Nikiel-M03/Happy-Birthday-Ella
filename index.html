@@ -14,9 +14,9 @@
       let t = 0;
       const snakeLength = 80;
       let trailGraphics;
+      let stacked = false;
 
       function preload() {
-        // Load a nice, legible font
         font = loadFont("https://cdnjs.cloudflare.com/ajax/libs/topcoat/0.8.0/font/SourceCodePro-Regular.otf");
       }
 
@@ -25,20 +25,34 @@
         trailGraphics = createGraphics(windowWidth, windowHeight);
         trailGraphics.clear();
 
+        // Dynamically decide layout based on width
+        stacked = windowWidth < 700;
+
         textFont(font);
-        textSize(min(windowWidth * 0.08, 100)); // scales font with screen size
+        textSize(stacked ? min(windowWidth * 0.18, 100) : min(windowWidth * 0.08, 100));
         fill(255);
 
-        const msg = "Happy Birthday Ella!";
-        const msgWidth = textWidth(msg);
-        const startX = (width - msgWidth) / 2;
-        const startY = height / 2;
+        let messages = stacked
+          ? ["Happy", "Birthday", "Ella!"]
+          : ["Happy Birthday Ella!"];
 
-        // Create letter path
-        pathPoints = font.textToPoints(msg, startX, startY, textSize(), {
-          sampleFactor: 0.15,
-          simplifyThreshold: 0
-        });
+        pathPoints = [];
+
+        let totalHeight = messages.length * textSize() * 1.1;
+        let startY = (height - totalHeight) / 2 + textSize();
+
+        for (let i = 0; i < messages.length; i++) {
+          let msg = messages[i];
+          let msgWidth = textWidth(msg);
+          let startX = (width - msgWidth) / 2;
+
+          let pts = font.textToPoints(msg, startX, startY + i * textSize() * 1.1, textSize(), {
+            sampleFactor: 0.15,
+            simplifyThreshold: 0
+          });
+
+          pathPoints = pathPoints.concat(pts);
+        }
 
         frameRate(60);
       }
@@ -46,19 +60,18 @@
       function draw() {
         background(10, 20, 40, 50);
 
-        // Get position on the text path
+        // Move along the path
         let idx = floor(t) % pathPoints.length;
         let pos = pathPoints[idx];
         snake.push({ x: pos.x, y: pos.y });
 
         if (snake.length > snakeLength) snake.shift();
 
-        // Leave trail on separate graphics layer
+        // Draw permanent trail
         trailGraphics.noStroke();
         trailGraphics.fill(0, 255, 100, 150);
         trailGraphics.ellipse(pos.x, pos.y, 8, 8);
 
-        // Draw the trail (so it stays!)
         image(trailGraphics, 0, 0);
 
         // Draw snake body
@@ -70,14 +83,14 @@
           ellipse(seg.x, seg.y + sin(i * 0.3 + frameCount * 0.1) * 3, sz);
         }
 
-        // Draw snake head glow
+        // Snake head glow
         let head = snake[snake.length - 1];
         if (head) {
           fill(255, 255, 150, 150);
           ellipse(head.x, head.y, 25);
         }
 
-        // Slight shimmer / sparkles for a magical birthday vibe
+        // Magical sparkles
         for (let i = 0; i < 5; i++) {
           stroke(255, 255, 200, 100);
           point(random(width), random(height));
@@ -86,7 +99,7 @@
         noStroke();
         t += 0.6;
 
-        // Keep the snake on screen by looping path
+        // Loop back
         if (t >= pathPoints.length) t = 0;
       }
 
@@ -94,7 +107,7 @@
         resizeCanvas(windowWidth, windowHeight);
         trailGraphics = createGraphics(windowWidth, windowHeight);
         trailGraphics.clear();
-        setup(); // Recalculate layout
+        setup(); // Recalculate layout on resize
       }
     </script>
   </body>
